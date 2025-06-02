@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Pause, RotateCcw, Settings, BarChart3 } from "lucide-react";
 import { usePomodoro } from "@/hooks/usePomodoro";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Index = () => {
   const {
@@ -20,12 +21,16 @@ const Index = () => {
   } = usePomodoro();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
       <div className="max-w-md mx-auto space-y-6">
-        {/* Header */}
+        {/* Header con toggle de tema */}
         <div className="text-center py-4">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">StudyBoost</h1>
-          <p className="text-gray-600">Técnica Pomodoro para estudiantes</p>
+          <div className="flex justify-between items-center mb-2">
+            <div className="w-10"></div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">StudyBoost</h1>
+            <ThemeToggle />
+          </div>
+          <p className="text-gray-600 dark:text-gray-300">Técnica Pomodoro para estudiantes</p>
         </div>
 
         {/* Estado actual */}
@@ -36,15 +41,15 @@ const Index = () => {
         </div>
 
         {/* Timer principal */}
-        <Card className="shadow-lg">
+        <Card className="shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <CardHeader className="text-center">
-            <CardTitle className="text-6xl font-mono text-gray-800">
+            <CardTitle className="text-6xl font-mono text-gray-800 dark:text-white">
               {formatTime(timeLeft)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {/* Barra de progreso */}
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-6">
               <div 
                 className={`h-3 rounded-full transition-all duration-1000 ${
                   isBreak ? 'bg-green-500' : 'bg-blue-500'
@@ -69,7 +74,7 @@ const Index = () => {
                 onClick={resetTimer}
                 variant="outline"
                 size="lg"
-                className="w-20 h-20 rounded-full"
+                className="w-20 h-20 rounded-full dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <RotateCcw className="w-8 h-8" />
               </Button>
@@ -78,9 +83,9 @@ const Index = () => {
         </Card>
 
         {/* Estadísticas rápidas */}
-        <Card>
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center text-lg">
+            <CardTitle className="flex items-center text-lg dark:text-white">
               <BarChart3 className="w-5 h-5 mr-2" />
               Estadísticas de hoy
             </CardTitle>
@@ -88,36 +93,36 @@ const Index = () => {
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalCycles}</p>
-                <p className="text-sm text-gray-600">Ciclos completados</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalCycles}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Ciclos completados</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {Math.floor(stats.totalStudyTime / 60)}h {stats.totalStudyTime % 60}m
                 </p>
-                <p className="text-sm text-gray-600">Tiempo estudiado</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Tiempo estudiado</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Configuración rápida */}
-        <Card>
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center text-lg">
+            <CardTitle className="flex items-center text-lg dark:text-white">
               <Settings className="w-5 h-5 mr-2" />
               Configuración
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <p className="font-semibold">{settings.workTime} min</p>
-                <p className="text-gray-600">Trabajo</p>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="font-semibold dark:text-white">{settings.workTime} min</p>
+                <p className="text-gray-600 dark:text-gray-400">Trabajo</p>
               </div>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="font-semibold">{settings.shortBreak} min</p>
-                <p className="text-gray-600">Descanso</p>
+              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <p className="font-semibold dark:text-white">{settings.shortBreak} min</p>
+                <p className="text-gray-600 dark:text-gray-400">Descanso</p>
               </div>
             </div>
           </CardContent>
@@ -134,12 +139,12 @@ const Index = () => {
         </Card>
 
         {/* Instrucciones PWA */}
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <CardContent className="text-center py-4">
-            <p className="text-sm text-blue-800 mb-2">
+            <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
               <strong>💡 Instalar aplicación</strong>
             </p>
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-blue-600 dark:text-blue-400">
               Toca el menú de tu navegador y selecciona "Añadir a pantalla de inicio" para usar StudyBoost como una app nativa.
             </p>
           </CardContent>
