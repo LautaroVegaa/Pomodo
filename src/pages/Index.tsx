@@ -121,9 +121,19 @@ const Index = () => {
         {/* Estadísticas rápidas */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center text-lg dark:text-white">
-              <BarChart3 className="w-5 h-5 mr-2" />
-              Estadísticas de hoy
+            <CardTitle className="flex items-center justify-between text-lg dark:text-white">
+              <div className="flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2" />
+                Estadísticas de hoy
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/statistics')}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                Ver más
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
