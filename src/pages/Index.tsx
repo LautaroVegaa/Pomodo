@@ -2,11 +2,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, RotateCcw, Settings, BarChart3 } from "lucide-react";
+import { Play, Pause, RotateCcw, Settings, BarChart3, LogOut, User } from "lucide-react";
 import { usePomodoro } from "@/hooks/usePomodoro";
+import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Index = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
   const {
     timeLeft,
     isActive,
@@ -20,15 +26,45 @@ const Index = () => {
     resetTimer
   } = usePomodoro();
 
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  if (!user) {
+    return null; // O un loader mientras redirige
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
       <div className="max-w-md mx-auto space-y-6">
-        {/* Header con toggle de tema */}
+        {/* Header con información del usuario */}
         <div className="text-center py-4">
           <div className="flex justify-between items-center mb-2">
-            <div className="w-10"></div>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 px-3 py-1 rounded-full shadow-sm">
+                <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-sm text-gray-700 dark:text-gray-200">{user.name}</span>
+              </div>
+            </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">StudyBoost</h1>
-            <ThemeToggle />
+            <div className="flex items-center space-x-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="w-10 h-10 rounded-full"
+              >
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
           <p className="text-gray-600 dark:text-gray-300">Técnica Pomodoro para estudiantes</p>
         </div>
@@ -128,24 +164,12 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Motivación */}
+        {/* Motivación personalizada */}
         <Card className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
           <CardContent className="text-center py-6">
-            <h3 className="text-lg font-semibold mb-2">¡Mantén el enfoque!</h3>
+            <h3 className="text-lg font-semibold mb-2">¡Excelente trabajo, {user.name}!</h3>
             <p className="text-sm opacity-90">
               Cada ciclo completado te acerca más a tus objetivos de estudio.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Instrucciones PWA */}
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="text-center py-4">
-            <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
-              <strong>💡 Instalar aplicación</strong>
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              Toca el menú de tu navegador y selecciona "Añadir a pantalla de inicio" para usar StudyBoost como una app nativa.
             </p>
           </CardContent>
         </Card>
