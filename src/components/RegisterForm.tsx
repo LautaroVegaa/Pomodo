@@ -17,11 +17,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const { register, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (!name || !email || !password || !confirmPassword) {
       setError('Por favor completa todos los campos');
@@ -40,8 +42,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
 
     try {
       await register(email, password, name);
-    } catch (error) {
-      setError('Error al crear la cuenta');
+      setSuccess('¡Cuenta creada exitosamente! Revisa tu email para confirmar tu cuenta.');
+    } catch (error: any) {
+      console.error('Error en registro:', error);
+      // Handle different types of registration errors
+      if (error.message.includes('User already registered')) {
+        setError('Este email ya está registrado. Intenta iniciar sesión');
+      } else if (error.message.includes('Invalid email')) {
+        setError('Por favor ingresa un email válido');
+      } else if (error.message.includes('Password should be at least 6 characters')) {
+        setError('La contraseña debe tener al menos 6 caracteres');
+      } else {
+        setError('Error al crear la cuenta. Intenta de nuevo');
+      }
     }
   };
 
@@ -124,6 +137,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
           {error && (
             <div className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="text-green-500 text-sm text-center bg-green-50 dark:bg-green-900/20 p-2 rounded">
+              {success}
             </div>
           )}
 

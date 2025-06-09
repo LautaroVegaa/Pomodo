@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface LoginFormProps {
   onToggleMode: () => void;
@@ -16,6 +17,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +30,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
 
     try {
       await login(email, password);
-    } catch (error) {
-      setError('Credenciales inválidas');
+      navigate('/');
+    } catch (error: any) {
+      console.error('Error en login:', error);
+      // Handle different types of authentication errors
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Email o contraseña incorrectos');
+      } else if (error.message.includes('Email not confirmed')) {
+        setError('Por favor confirma tu email antes de iniciar sesión');
+      } else if (error.message.includes('Too many requests')) {
+        setError('Demasiados intentos. Intenta de nuevo más tarde');
+      } else {
+        setError('Error al iniciar sesión. Intenta de nuevo');
+      }
     }
   };
 

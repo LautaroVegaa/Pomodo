@@ -1,17 +1,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -31,35 +28,47 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Cargar usuario del localStorage al iniciar
-    const savedUser = localStorage.getItem('studyboost-user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulación de login - en producción esto se conectaría a Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userData = {
-        id: '1',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        name: email.split('@')[0]
-      };
-      
-      setUser(userData);
-      localStorage.setItem('studyboost-user', JSON.stringify(userData));
+        password,
+      });
+
+      if (error) {
+        console.error('Error en login:', error);
+        throw new Error(error.message);
+      }
+
       console.log('Login exitoso para:', email);
     } catch (error) {
       console.error('Error en login:', error);
-      throw new Error('Credenciales inválidas');
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -68,34 +77,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     try {
-      // Simulación de registro - en producción esto se conectaría a Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const redirectUrl = `${window.location.origin}/`;
       
-      const userData = {
-        id: Date.now().toString(),
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name
-      };
-      
-      setUser(userData);
-      localStorage.setItem('studyboost-user', JSON.stringify(userData));
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: name,
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Error en registro:', error);
+        throw new Error(error.message);
+      }
+
       console.log('Registro exitoso para:', email);
+      
+      // If email confirmation is disabled, the user will be logged in automatically
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('Usuario registrado, esperando confirmación de email');
+      }
     } catch (error) {
       console.error('Error en registro:', error);
-      throw new Error('Error al crear la cuenta');
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('studyboost-user');
-    console.log('Usuario deslogueado');
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error en logout:', error);
+        throw new Error(error.message);
+      }
+      console.log('Usuario deslogueado');
+    } catch (error) {
+      console.error('Error en logout:', error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, session, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

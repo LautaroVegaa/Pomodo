@@ -36,10 +36,17 @@ const Index = () => {
     return null; // O un loader mientras redirige
   }
 
-  const handleLogout = () => {
-    logout();
-    navigate('/auth');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
+
+  // Get user name from user metadata or email
+  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
@@ -50,7 +57,7 @@ const Index = () => {
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 px-3 py-1 rounded-full shadow-sm">
                 <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-sm text-gray-700 dark:text-gray-200">{user.name}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-200">{userName}</span>
               </div>
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">StudyBoost</h1>
@@ -177,7 +184,7 @@ const Index = () => {
         {/* Motivación personalizada */}
         <Card className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
           <CardContent className="text-center py-6">
-            <h3 className="text-lg font-semibold mb-2">¡Excelente trabajo, {user.name}!</h3>
+            <h3 className="text-lg font-semibold mb-2">¡Excelente trabajo, {userName}!</h3>
             <p className="text-sm opacity-90">
               Cada ciclo completado te acerca más a tus objetivos de estudio.
             </p>
