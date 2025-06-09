@@ -2,10 +2,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, RotateCcw, Settings, BarChart3, LogOut, User } from "lucide-react";
+import { Play, Pause, RotateCcw, BarChart3, User, Settings as SettingsIcon } from "lucide-react";
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Settings } from "@/components/Settings";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -36,15 +36,6 @@ const Index = () => {
     return null; // O un loader mientras redirige
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/auth');
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-    }
-  };
-
   // Get user name from user metadata or email
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
 
@@ -61,17 +52,7 @@ const Index = () => {
               </div>
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Pomodō</h1>
-            <div className="flex items-center space-x-2">
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="w-10 h-10 rounded-full"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
+            <Settings />
           </div>
           <p className="text-gray-600 dark:text-gray-300">Técnica Pomodoro para estudiantes</p>
         </div>
@@ -163,7 +144,7 @@ const Index = () => {
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="flex items-center text-lg dark:text-white">
-              <Settings className="w-5 h-5 mr-2" />
+              <SettingsIcon className="w-5 h-5 mr-2" />
               Configuración
             </CardTitle>
           </CardHeader>
