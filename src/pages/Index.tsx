@@ -2,10 +2,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, RotateCcw, BarChart3, User, Settings as SettingsIcon } from "lucide-react";
+import { Play, Pause, RotateCcw, BarChart3, User } from "lucide-react";
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { useAuth } from "@/contexts/AuthContext";
 import { Settings } from "@/components/Settings";
+import { EditableTimeCard } from "@/components/EditableTimeCard";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -23,7 +24,8 @@ const Index = () => {
     progress,
     formatTime,
     toggleTimer,
-    resetTimer
+    resetTimer,
+    updateSettings
   } = usePomodoro();
 
   useEffect(() => {
@@ -38,6 +40,20 @@ const Index = () => {
 
   // Get user name from user metadata or email
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+
+  const handleWorkTimeChange = (newTime: number) => {
+    updateSettings({
+      ...settings,
+      workTime: newTime
+    });
+  };
+
+  const handleBreakTimeChange = (newTime: number) => {
+    updateSettings({
+      ...settings,
+      shortBreak: newTime
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
@@ -140,24 +156,29 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Configuración rápida */}
+        {/* Configuración personalizable */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center text-lg dark:text-white">
-              <SettingsIcon className="w-5 h-5 mr-2" />
-              Configuración
+            <CardTitle className="text-lg dark:text-white text-center">
+              Customize Pomodoro
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="font-semibold dark:text-white">{settings.workTime} min</p>
-                <p className="text-gray-600 dark:text-gray-400">Trabajo</p>
-              </div>
-              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <p className="font-semibold dark:text-white">{settings.shortBreak} min</p>
-                <p className="text-gray-600 dark:text-gray-400">Descanso</p>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <EditableTimeCard
+                label="Trabajo"
+                value={settings.workTime}
+                maxValue={60}
+                bgColor="bg-blue-50 dark:bg-blue-900/20"
+                onSave={handleWorkTimeChange}
+              />
+              <EditableTimeCard
+                label="Descanso"
+                value={settings.shortBreak}
+                maxValue={30}
+                bgColor="bg-green-50 dark:bg-green-900/20"
+                onSave={handleBreakTimeChange}
+              />
             </div>
           </CardContent>
         </Card>
