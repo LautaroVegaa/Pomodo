@@ -18,7 +18,7 @@ const Auth = () => {
         <div className="text-center py-4">
           <div className="flex justify-between items-center mb-2">
             <div className="w-10"></div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">StudyBoost</h1>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Pomodō</h1>
             <ThemeToggle />
           </div>
           <p className="text-gray-600 dark:text-gray-300">Técnica Pomodoro para estudiantes</p>

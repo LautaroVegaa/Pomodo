@@ -1,7 +1,7 @@
 
 {
-  "name": "StudyBoost - Pomodoro para Estudiantes",
-  "short_name": "StudyBoost",
+  "name": "Pomodō - Pomodoro para Estudiantes",
+  "short_name": "Pomodō",
   "description": "Aplicación de técnica Pomodoro diseñada específicamente para estudiantes",
   "start_url": "/",
   "display": "standalone",

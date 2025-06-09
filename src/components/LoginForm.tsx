@@ -53,7 +53,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
           Iniciar Sesión
         </CardTitle>
         <p className="text-gray-600 dark:text-gray-300">
-          Accede a tu cuenta de StudyBoost
+          Accede a tu cuenta de Pomodō
         </p>
       </CardHeader>
       <CardContent>

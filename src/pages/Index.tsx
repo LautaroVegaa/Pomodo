@@ -60,7 +60,7 @@ const Index = () => {
                 <span className="text-sm text-gray-700 dark:text-gray-200">{userName}</span>
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">StudyBoost</h1>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Pomodō</h1>
             <div className="flex items-center space-x-2">
               <ThemeToggle />
               <Button
