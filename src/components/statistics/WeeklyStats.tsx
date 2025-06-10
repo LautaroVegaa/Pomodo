@@ -93,11 +93,13 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = ({ data, isLoading }) => 
         <CardContent className="p-2 sm:p-6">
           <ChartContainer config={chartConfig} className="h-48 sm:h-64 lg:h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 20 }}>
                 <XAxis 
                   dataKey="week" 
                   className="text-xs sm:text-sm" 
                   tick={{ fontSize: 10 }}
+                  interval={0}
+                  height={20}
                 />
                 <YAxis 
                   className="text-xs sm:text-sm" 

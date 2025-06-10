@@ -93,12 +93,13 @@ export const MonthlyStats: React.FC<MonthlyStatsProps> = ({ data, isLoading }) =
         <CardContent className="p-2 sm:p-6">
           <ChartContainer config={chartConfig} className="h-48 sm:h-64 lg:h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 20 }}>
                 <XAxis 
                   dataKey="month" 
                   className="text-xs sm:text-sm" 
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 9 }}
                   interval={0}
+                  height={20}
                 />
                 <YAxis 
                   className="text-xs sm:text-sm" 

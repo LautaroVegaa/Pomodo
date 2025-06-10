@@ -22,6 +22,7 @@ export const DailyStats: React.FC<DailyStatsProps> = ({ data, isLoading }) => {
 
   const chartData = data.map(day => ({
     day: new Date(day.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }),
+    shortDay: new Date(day.date).toLocaleDateString('es-ES', { weekday: 'short' }),
     studyTime: day.studyTime,
     cycles: day.cycles,
     hours: Math.floor(day.studyTime / 60),
@@ -92,12 +93,15 @@ export const DailyStats: React.FC<DailyStatsProps> = ({ data, isLoading }) => {
         <CardContent className="p-2 sm:p-6">
           <ChartContainer config={chartConfig} className="h-48 sm:h-64 lg:h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 25 }}>
                 <XAxis 
-                  dataKey="day" 
+                  dataKey="shortDay" 
                   className="text-xs sm:text-sm" 
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 8 }}
                   interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={25}
                 />
                 <YAxis 
                   className="text-xs sm:text-sm" 
