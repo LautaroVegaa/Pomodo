@@ -2,11 +2,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, RotateCcw, BarChart3, User } from "lucide-react";
+import { Play, Pause, RotateCcw, BarChart3, User, Clock, Coffee } from "lucide-react";
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { useAuth } from "@/contexts/AuthContext";
 import { Settings } from "@/components/Settings";
-import { EditableTimeCard } from "@/components/EditableTimeCard";
+import { TimeSlider } from "@/components/TimeSlider";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -22,6 +22,7 @@ const Index = () => {
     settings,
     stats,
     progress,
+    motivationalMessage,
     formatTime,
     toggleTimer,
     resetTimer,
@@ -35,7 +36,7 @@ const Index = () => {
   }, [user, navigate]);
 
   if (!user) {
-    return null; // O un loader mientras redirige
+    return null;
   }
 
   // Get user name from user metadata or email
@@ -156,39 +157,43 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Configuración personalizable */}
+        {/* Configuración personalizable con sliders */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="text-lg dark:text-white text-center">
-              Customize Pomodoro
+              Personalizar Pomodoro
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <EditableTimeCard
-                label="Trabajo"
+            <div className="space-y-4">
+              <TimeSlider
+                label="Tiempo de trabajo"
                 value={settings.workTime}
                 maxValue={60}
+                minValue={1}
                 bgColor="bg-blue-50 dark:bg-blue-900/20"
-                onSave={handleWorkTimeChange}
+                icon={<Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                onChange={handleWorkTimeChange}
               />
-              <EditableTimeCard
-                label="Descanso"
+              <TimeSlider
+                label="Tiempo de descanso"
                 value={settings.shortBreak}
                 maxValue={30}
+                minValue={1}
                 bgColor="bg-green-50 dark:bg-green-900/20"
-                onSave={handleBreakTimeChange}
+                icon={<Coffee className="w-4 h-4 text-green-600 dark:text-green-400" />}
+                onChange={handleBreakTimeChange}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Motivación personalizada */}
+        {/* Tarjeta motivacional dinámica */}
         <Card className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
           <CardContent className="text-center py-6">
-            <h3 className="text-lg font-semibold mb-2">¡Excelente trabajo, {userName}!</h3>
+            <h3 className="text-lg font-semibold mb-2">¡{userName}!</h3>
             <p className="text-sm opacity-90">
-              Cada ciclo completado te acerca más a tus objetivos de estudio.
+              {motivationalMessage}
             </p>
           </CardContent>
         </Card>
