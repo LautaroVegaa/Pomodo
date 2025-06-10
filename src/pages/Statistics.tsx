@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Calendar, BarChart3, Clock, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { DailyStats } from "@/components/statistics/DailyStats";
 import { WeeklyStats } from "@/components/statistics/WeeklyStats";
 import { MonthlyStats } from "@/components/statistics/MonthlyStats";
@@ -44,7 +43,6 @@ const Statistics = () => {
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">Análisis de tu progreso de estudio</p>
             </div>
           </div>
-          <ThemeToggle />
         </div>
 
         {/* Resumen rápido responsive */}

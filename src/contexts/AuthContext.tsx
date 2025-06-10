@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session);
@@ -42,8 +42,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     );
 
-    // Check for existing session
+    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session);
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -111,12 +112,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Clear local storage before signing out
+      localStorage.removeItem('pomodoro-stats');
+      localStorage.removeItem('pomodoro-state');
+      localStorage.removeItem('pomodoro-settings');
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error en logout:', error);
         throw new Error(error.message);
       }
-      console.log('Usuario deslogueado');
+      console.log('Usuario deslogueado exitosamente');
     } catch (error) {
       console.error('Error en logout:', error);
       throw error;

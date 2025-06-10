@@ -87,7 +87,15 @@ export const useStatistics = () => {
         }
       }
       
-      // Generar datos históricos (últimos 30 días) con datos reales si existen
+      // Cargar datos históricos desde localStorage si existen
+      const savedHistoricalStats = localStorage.getItem('pomodoro-historical-stats');
+      let historicalStats = {};
+      
+      if (savedHistoricalStats) {
+        historicalStats = JSON.parse(savedHistoricalStats);
+      }
+      
+      // Generar datos para los últimos 30 días (solo con datos reales)
       const dailyData: DayData[] = [];
       for (let i = 29; i >= 0; i--) {
         const date = new Date();
@@ -97,18 +105,28 @@ export const useStatistics = () => {
         if (dateString === currentDate) {
           dailyData.push(todayStats);
         } else {
-          // Para días anteriores, generar datos mock
-          const studyTime = Math.floor(Math.random() * 120) + 20;
-          dailyData.push({
-            date: dateString,
-            studyTime,
-            cycles: Math.floor(studyTime / 25) + Math.floor(Math.random() * 3),
-            breaks: Math.floor(studyTime / 25) + Math.floor(Math.random() * 2)
-          });
+          // Buscar datos históricos para este día
+          const historicalData = historicalStats[dateString];
+          if (historicalData) {
+            dailyData.push({
+              date: dateString,
+              studyTime: historicalData.totalStudyTime || 0,
+              cycles: historicalData.totalCycles || 0,
+              breaks: historicalData.totalBreakTime ? Math.floor(historicalData.totalBreakTime / 5) : historicalData.totalCycles || 0
+            });
+          } else {
+            // Si no hay datos históricos, crear entrada vacía
+            dailyData.push({
+              date: dateString,
+              studyTime: 0,
+              cycles: 0,
+              breaks: 0
+            });
+          }
         }
       }
 
-      // Calcular estadísticas semanales
+      // Calcular estadísticas semanales basadas en datos reales
       const weeklyData: WeekData[] = [];
       for (let i = 3; i >= 0; i--) {
         const weekStart = new Date();
@@ -132,58 +150,49 @@ export const useStatistics = () => {
         });
       }
 
-      // Generar datos mensuales
+      // Generar datos mensuales basados en datos reales
       const monthlyData: MonthData[] = [];
       for (let i = 5; i >= 0; i--) {
         const monthDate = new Date();
         monthDate.setMonth(monthDate.getMonth() - i);
         
-        let totalStudyTime, totalCycles;
-        if (i === 0) {
-          // Mes actual: usar datos reales
-          totalStudyTime = dailyData
-            .filter(day => new Date(day.date).getMonth() === monthDate.getMonth())
-            .reduce((sum, day) => sum + day.studyTime, 0);
-          totalCycles = dailyData
-            .filter(day => new Date(day.date).getMonth() === monthDate.getMonth())
-            .reduce((sum, day) => sum + day.cycles, 0);
-        } else {
-          // Meses anteriores: datos mock
-          totalStudyTime = Math.floor(Math.random() * 2000) + 500;
-          totalCycles = Math.floor(Math.random() * 100) + 20;
-        }
+        const monthDays = dailyData.filter(day => {
+          const dayDate = new Date(day.date);
+          return dayDate.getMonth() === monthDate.getMonth() && dayDate.getFullYear() === monthDate.getFullYear();
+        });
+        
+        const totalStudyTime = monthDays.reduce((sum, day) => sum + day.studyTime, 0);
+        const totalCycles = monthDays.reduce((sum, day) => sum + day.cycles, 0);
+        const averagePerDay = monthDays.length > 0 ? Math.floor(totalStudyTime / monthDays.length) : 0;
         
         monthlyData.push({
           month: monthDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
           totalStudyTime,
           totalCycles,
-          averagePerDay: Math.floor(totalStudyTime / 30),
+          averagePerDay,
           weeks: []
         });
       }
 
-      // Generar datos anuales
+      // Generar datos anuales basados en datos reales
       const yearlyData: YearData[] = [];
       for (let i = 2; i >= 0; i--) {
         const yearDate = new Date();
         yearDate.setFullYear(yearDate.getFullYear() - i);
         
-        let totalStudyTime, totalCycles;
-        if (i === 0) {
-          // Año actual: usar datos reales del mes actual
-          totalStudyTime = monthlyData.reduce((sum, month) => sum + month.totalStudyTime, 0);
-          totalCycles = monthlyData.reduce((sum, month) => sum + month.totalCycles, 0);
-        } else {
-          // Años anteriores: datos mock
-          totalStudyTime = Math.floor(Math.random() * 20000) + 5000;
-          totalCycles = Math.floor(Math.random() * 1000) + 200;
-        }
+        const yearMonths = monthlyData.filter(month => {
+          return month.month.includes(yearDate.getFullYear().toString());
+        });
+        
+        const totalStudyTime = yearMonths.reduce((sum, month) => sum + month.totalStudyTime, 0);
+        const totalCycles = yearMonths.reduce((sum, month) => sum + month.totalCycles, 0);
+        const averagePerMonth = yearMonths.length > 0 ? Math.floor(totalStudyTime / yearMonths.length) : 0;
         
         yearlyData.push({
           year: yearDate.getFullYear().toString(),
           totalStudyTime,
           totalCycles,
-          averagePerMonth: Math.floor(totalStudyTime / 12),
+          averagePerMonth,
           months: []
         });
       }

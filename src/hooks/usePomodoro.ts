@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,6 +77,19 @@ export const usePomodoro = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Función para guardar estadísticas históricas
+  const saveHistoricalStats = (stats: PomodoroStats) => {
+    const savedHistoricalStats = localStorage.getItem('pomodoro-historical-stats');
+    let historicalStats = {};
+    
+    if (savedHistoricalStats) {
+      historicalStats = JSON.parse(savedHistoricalStats);
+    }
+    
+    historicalStats[stats.date] = stats;
+    localStorage.setItem('pomodoro-historical-stats', JSON.stringify(historicalStats));
+  };
+
   // Cargar configuraciones, estadísticas y estado del localStorage
   useEffect(() => {
     // Cargar configuraciones
@@ -103,7 +115,7 @@ export const usePomodoro = () => {
       setState(initialState);
     }
 
-    // Cargar estadísticas
+    // Cargar estadísticas del día actual
     const savedStats = localStorage.getItem('pomodoro-stats');
     if (savedStats) {
       const parsedStats = JSON.parse(savedStats);
@@ -112,6 +124,11 @@ export const usePomodoro = () => {
       if (parsedStats.date === today) {
         setStats(parsedStats);
       } else {
+        // Si es un nuevo día, guardar las estadísticas del día anterior y resetear
+        if (parsedStats.totalCycles > 0 || parsedStats.totalStudyTime > 0) {
+          saveHistoricalStats(parsedStats);
+        }
+        
         const newStats = {
           totalCycles: 0,
           totalStudyTime: 0,
@@ -121,6 +138,16 @@ export const usePomodoro = () => {
         setStats(newStats);
         localStorage.setItem('pomodoro-stats', JSON.stringify(newStats));
       }
+    } else {
+      // Primera vez usando la app
+      const newStats = {
+        totalCycles: 0,
+        totalStudyTime: 0,
+        totalBreakTime: 0,
+        date: new Date().toDateString()
+      };
+      setStats(newStats);
+      localStorage.setItem('pomodoro-stats', JSON.stringify(newStats));
     }
 
     // Crear elemento de audio para notificaciones
