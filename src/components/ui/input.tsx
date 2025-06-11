@@ -7,7 +7,6 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
     const isStandalone = useStandaloneMode();
     const inputRef = React.useRef<HTMLInputElement>(null);
     const combinedRef = (node: HTMLInputElement) => {
-      // Asignar ambas referencias
       inputRef.current = node;
       if (typeof ref === 'function') {
         ref(node);
@@ -17,7 +16,6 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
     };
 
     React.useEffect(() => {
-      // Si es un campo de email y NO está en modo standalone, aplicar el autofocus
       if (type === 'email' && !isStandalone && autoFocus && inputRef.current) {
         inputRef.current.focus();
       }
@@ -33,11 +31,12 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           "cursor-text",
           className
         )}
-        ref={ref}
+        ref={combinedRef}
         enterKeyHint="done"
         inputMode={type === 'email' ? 'email' : type === 'password' ? 'text' : undefined}
         readOnly={false}
         autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : undefined}
+        onTouchStart={(e) => e.currentTarget.focus()}
         {...props}
       />
     )
