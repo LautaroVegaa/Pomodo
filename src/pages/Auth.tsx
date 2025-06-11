@@ -30,18 +30,6 @@ const Auth = () => {
         ) : (
           <RegisterForm onToggleMode={toggleMode} />
         )}
-
-        {/* Información adicional */}
-        <div className="text-center">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
-              <strong>🚀 Próximamente</strong>
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              Sistema de autenticación completo con Supabase para una experiencia más segura y sincronización en la nube.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

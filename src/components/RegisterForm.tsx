@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
           Crear Cuenta
         </CardTitle>
         <p className="text-gray-600 dark:text-gray-300">
-          Únete a StudyBoost
+          Únete a Pomodō
         </p>
       </CardHeader>
       <CardContent>
