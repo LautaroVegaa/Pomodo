@@ -25,18 +25,30 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation",
-          "md:h-10 md:text-sm",
+          "flex h-14 w-full rounded-md border border-input bg-background px-4 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation",
+          "md:h-12 md:text-sm",
           "active:scale-[0.98] transition-transform duration-100",
-          "cursor-text",
+          "cursor-text appearance-none",
+          "tap-highlight-transparent",
           className
         )}
         ref={combinedRef}
-        enterKeyHint="done"
-        inputMode={type === 'email' ? 'email' : type === 'password' ? 'text' : undefined}
+        enterKeyHint={type === 'password' ? 'go' : 'next'}
+        inputMode={type === 'email' ? 'email' : type === 'password' ? 'text' : 'text'}
         readOnly={false}
         autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : undefined}
-        onTouchStart={(e) => e.currentTarget.focus()}
+        autoCorrect="off"
+        autoCapitalize={type === 'email' ? 'none' : 'sentences'}
+        spellCheck={false}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.currentTarget.focus();
+        }}
+        style={{
+          WebkitAppearance: 'none',
+          WebkitTapHighlightColor: 'transparent',
+          WebkitUserSelect: 'text'
+        }}
         {...props}
       />
     )
