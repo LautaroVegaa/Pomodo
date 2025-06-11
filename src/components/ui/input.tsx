@@ -1,10 +1,29 @@
 
 import * as React from "react"
-
+import { useStandaloneMode } from "@/hooks/useStandaloneMode"
 import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, autoFocus, ...props }, ref) => {
+    const isStandalone = useStandaloneMode();
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const combinedRef = (node: HTMLInputElement) => {
+      // Asignar ambas referencias
+      inputRef.current = node;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    };
+
+    React.useEffect(() => {
+      // Si es un campo de email y NO está en modo standalone, aplicar el autofocus
+      if (type === 'email' && !isStandalone && autoFocus && inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, [type, isStandalone, autoFocus]);
+
     return (
       <input
         type={type}
@@ -15,11 +34,6 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
-        style={{
-          WebkitAppearance: 'none',
-          WebkitTapHighlightColor: 'transparent',
-          touchAction: 'manipulation'
-        }}
         {...props}
       />
     )
