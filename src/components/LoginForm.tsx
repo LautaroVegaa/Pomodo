@@ -80,12 +80,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
                 autoCorrect="off"
                 spellCheck="false"
                 inputMode="email"
-                style={{
+                style={{ 
+                  fontSize: '16px',
                   WebkitUserSelect: 'text',
                   WebkitTouchCallout: 'none',
                   touchAction: 'manipulation'
                 }}
-                {...(!isIOSStandalone && { autoFocus: true })}
+                onTouchStart={(e) => {
+                  setTimeout(() => {
+                    e.currentTarget.focus();
+                  }, 100);
+                }}
+                onFocus={() => window.scrollTo(0, 0)}
               />
             </div>
           </div>

@@ -118,7 +118,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
               <Input
-                ref={emailInputRef}
                 id="email"
                 name="email"
                 type="email"
@@ -132,12 +131,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                 autoCorrect="off"
                 spellCheck="false"
                 inputMode="email"
-                style={{
+                style={{ 
+                  fontSize: '16px',
                   WebkitUserSelect: 'text',
                   WebkitTouchCallout: 'none',
                   touchAction: 'manipulation'
                 }}
-                {...(!isIOSStandalone && { autoFocus: true })}
+                onTouchStart={(e) => {
+                  setTimeout(() => {
+                    e.currentTarget.focus();
+                  }, 100);
+                }}
+                onFocus={() => window.scrollTo(0, 0)}
               />
             </div>
           </div>
