@@ -27,6 +27,7 @@ export interface PomodoroState {
   isBreak: boolean;
   cycle: number;
   currentSessionStartTime: number;
+  lastUpdateTime: number;
 }
 
 const defaultSettings: PomodoroSettings = {
@@ -73,12 +74,14 @@ export const usePomodoro = () => {
     isActive: false,
     isBreak: false,
     cycle: 1,
-    currentSessionStartTime: 0
+    currentSessionStartTime: 0,
+    lastUpdateTime: Date.now()
   });
 
   const [motivationalMessage, setMotivationalMessage] = useState(motivationalMessages.work[0]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const visibilityTimeRef = useRef<number>(Date.now());
 
   // Función para generar claves de localStorage específicas del usuario
   const getUserStorageKey = (key: string) => {
@@ -110,6 +113,25 @@ export const usePomodoro = () => {
     }
   };
 
+  // Sincronizar tiempo cuando la app vuelve a estar visible
+  const syncTimeWhenVisible = useCallback(() => {
+    if (!state.isActive || !user) return;
+
+    const currentTime = Date.now();
+    const timePassed = Math.floor((currentTime - state.lastUpdateTime) / 1000);
+    
+    if (timePassed > 0) {
+      setState(prev => {
+        const newTimeLeft = Math.max(0, prev.timeLeft - timePassed);
+        return {
+          ...prev,
+          timeLeft: newTimeLeft,
+          lastUpdateTime: currentTime
+        };
+      });
+    }
+  }, [state.isActive, state.lastUpdateTime, user]);
+
   // Cargar configuraciones, estadísticas y estado del localStorage
   useEffect(() => {
     if (!user) return;
@@ -125,6 +147,10 @@ export const usePomodoro = () => {
     const savedState = localStorage.getItem(getUserStorageKey('pomodoro-state'));
     if (savedState) {
       const parsedState = JSON.parse(savedState);
+      // Agregar lastUpdateTime si no existe
+      if (!parsedState.lastUpdateTime) {
+        parsedState.lastUpdateTime = Date.now();
+      }
       setState(parsedState);
     } else {
       const initialState = {
@@ -132,7 +158,8 @@ export const usePomodoro = () => {
         isActive: false,
         isBreak: false,
         cycle: 1,
-        currentSessionStartTime: 0
+        currentSessionStartTime: 0,
+        lastUpdateTime: Date.now()
       };
       setState(initialState);
     }
@@ -199,13 +226,14 @@ export const usePomodoro = () => {
     setMotivationalMessage(randomMessage);
   }, [state.isBreak, state.cycle]);
 
-  // Timer principal con mejor manejo de visibilidad
+  // Timer principal con mejor manejo de visibilidad y persistencia
   useEffect(() => {
     if (state.isActive && state.timeLeft > 0) {
       intervalRef.current = setInterval(() => {
         setState(prev => ({
           ...prev,
-          timeLeft: prev.timeLeft - 1
+          timeLeft: Math.max(0, prev.timeLeft - 1),
+          lastUpdateTime: Date.now()
         }));
       }, 1000);
     } else if (state.timeLeft === 0 && state.isActive) {
@@ -227,18 +255,47 @@ export const usePomodoro = () => {
   // Detectar cuando la app vuelve a estar visible para sincronizar el estado
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && state.isActive) {
-        // La app volvió a estar visible, mantener el timer corriendo
-        console.log('App visible nuevamente, timer activo');
+      if (!document.hidden) {
+        // La app volvió a estar visible, sincronizar tiempo
+        syncTimeWhenVisible();
+        visibilityTimeRef.current = Date.now();
+      } else {
+        // La app se ocultó, guardar el tiempo
+        visibilityTimeRef.current = Date.now();
       }
     };
 
+    const handleFocus = () => {
+      syncTimeWhenVisible();
+    };
+
+    const handleBlur = () => {
+      // Guardar estado cuando se pierde el foco
+      if (user && state.isActive) {
+        localStorage.setItem(getUserStorageKey('pomodoro-state'), JSON.stringify({
+          ...state,
+          lastUpdateTime: Date.now()
+        }));
+      }
+    };
+
+    // Detectar cuando la app se reanuda en móviles
+    const handleResume = () => {
+      syncTimeWhenVisible();
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('pageshow', handleResume);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('pageshow', handleResume);
     };
-  }, [state.isActive]);
+  }, [syncTimeWhenVisible, user, state]);
 
   const playNotificationSound = () => {
     if (settings.soundEnabled && audioRef.current) {
@@ -248,24 +305,35 @@ export const usePomodoro = () => {
 
   const triggerVibration = () => {
     if (settings.vibrationEnabled && 'vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200, 100, 200]);
+      // Patrón de vibración más fuerte para móviles
+      navigator.vibrate([300, 100, 300, 100, 300]);
     }
   };
 
   const showNotification = (title: string, body: string) => {
     if (settings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
+      const notification = new Notification(title, {
         body,
         icon: '/favicon.ico',
         badge: '/favicon.ico',
         tag: 'pomodoro-notification',
-        requireInteraction: true
+        requireInteraction: true,
+        vibrate: [300, 100, 300, 100, 300]
       });
+
+      // Auto cerrar después de 10 segundos
+      setTimeout(() => {
+        notification.close();
+      }, 10000);
     }
   };
 
   const handleCycleComplete = useCallback(() => {
-    setState(prev => ({ ...prev, isActive: false }));
+    setState(prev => ({ 
+      ...prev, 
+      isActive: false,
+      lastUpdateTime: Date.now()
+    }));
     
     // Reproducir sonido y vibración
     playNotificationSound();
@@ -292,7 +360,8 @@ export const usePomodoro = () => {
       setState(prev => ({
         ...prev,
         timeLeft: breakTime * 60,
-        isBreak: true
+        isBreak: true,
+        lastUpdateTime: Date.now()
       }));
       
       const notificationTitle = '¡Ciclo completado!';
@@ -306,7 +375,8 @@ export const usePomodoro = () => {
       });
     } else {
       // Completó descanso
-      const breakTime = state.timeLeft === settings.longBreak * 60 ? settings.longBreak : settings.shortBreak;
+      const isLongBreak = state.cycle % settings.cyclesBeforeLongBreak === 0;
+      const breakTime = isLongBreak ? settings.longBreak : settings.shortBreak;
       const newStats = {
         ...stats,
         totalBreakTime: stats.totalBreakTime + breakTime
@@ -321,7 +391,8 @@ export const usePomodoro = () => {
         ...prev,
         timeLeft: settings.workTime * 60,
         isBreak: false,
-        cycle: prev.cycle + 1
+        cycle: prev.cycle + 1,
+        lastUpdateTime: Date.now()
       }));
       
       const notificationTitle = '¡Descanso terminado!';
@@ -337,17 +408,24 @@ export const usePomodoro = () => {
   }, [state, settings, stats, toast, user]);
 
   const toggleTimer = () => {
+    const currentTime = Date.now();
+    
     if (!state.isActive) {
       setState(prev => ({
         ...prev,
         isActive: true,
-        currentSessionStartTime: Date.now()
+        currentSessionStartTime: currentTime,
+        lastUpdateTime: currentTime
       }));
       
       // Solicitar permisos de notificación
       requestNotificationPermission();
     } else {
-      setState(prev => ({ ...prev, isActive: false }));
+      setState(prev => ({ 
+        ...prev, 
+        isActive: false,
+        lastUpdateTime: currentTime
+      }));
     }
   };
 
@@ -357,7 +435,8 @@ export const usePomodoro = () => {
       isActive: false,
       isBreak: false,
       cycle: 1,
-      currentSessionStartTime: 0
+      currentSessionStartTime: 0,
+      lastUpdateTime: Date.now()
     });
   };
 
@@ -371,7 +450,8 @@ export const usePomodoro = () => {
     if (!state.isActive) {
       setState(prev => ({
         ...prev,
-        timeLeft: newSettings.workTime * 60
+        timeLeft: newSettings.workTime * 60,
+        lastUpdateTime: Date.now()
       }));
     }
   };

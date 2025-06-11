@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -109,7 +110,12 @@ export const useStatistics = () => {
       let historicalStats = {};
       
       if (savedHistoricalStats) {
-        historicalStats = JSON.parse(savedHistoricalStats);
+        try {
+          historicalStats = JSON.parse(savedHistoricalStats);
+        } catch (error) {
+          console.error('Error parsing historical stats:', error);
+          historicalStats = {};
+        }
       }
       
       // Generar datos para los últimos 30 días (solo con datos reales específicos del usuario)
@@ -147,7 +153,7 @@ export const useStatistics = () => {
       const weeklyData: WeekData[] = [];
       for (let i = 3; i >= 0; i--) {
         const weekStart = new Date();
-        weekStart.setDate(weekStart.getDate() - (i * 7));
+        weekStart.setDate(weekStart.getDate() - (i * 7) - weekStart.getDay());
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
         
@@ -180,7 +186,8 @@ export const useStatistics = () => {
         
         const totalStudyTime = monthDays.reduce((sum, day) => sum + day.studyTime, 0);
         const totalCycles = monthDays.reduce((sum, day) => sum + day.cycles, 0);
-        const averagePerDay = monthDays.length > 0 ? Math.floor(totalStudyTime / monthDays.length) : 0;
+        const daysWithData = monthDays.filter(day => day.cycles > 0 || day.studyTime > 0).length;
+        const averagePerDay = daysWithData > 0 ? Math.floor(totalStudyTime / daysWithData) : 0;
         
         monthlyData.push({
           month: monthDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
@@ -197,13 +204,17 @@ export const useStatistics = () => {
         const yearDate = new Date();
         yearDate.setFullYear(yearDate.getFullYear() - i);
         
-        const yearMonths = monthlyData.filter(month => {
-          return month.month.includes(yearDate.getFullYear().toString());
+        const yearDays = dailyData.filter(day => {
+          const dayDate = new Date(day.date);
+          return dayDate.getFullYear() === yearDate.getFullYear();
         });
         
-        const totalStudyTime = yearMonths.reduce((sum, month) => sum + month.totalStudyTime, 0);
-        const totalCycles = yearMonths.reduce((sum, month) => sum + month.totalCycles, 0);
-        const averagePerMonth = yearMonths.length > 0 ? Math.floor(totalStudyTime / yearMonths.length) : 0;
+        const totalStudyTime = yearDays.reduce((sum, day) => sum + day.studyTime, 0);
+        const totalCycles = yearDays.reduce((sum, day) => sum + day.cycles, 0);
+        const monthsWithData = monthlyData.filter(month => 
+          month.month.includes(yearDate.getFullYear().toString()) && (month.totalCycles > 0 || month.totalStudyTime > 0)
+        ).length;
+        const averagePerMonth = monthsWithData > 0 ? Math.floor(totalStudyTime / monthsWithData) : 0;
         
         yearlyData.push({
           year: yearDate.getFullYear().toString(),
@@ -214,9 +225,9 @@ export const useStatistics = () => {
         });
       }
 
-      const currentWeek = weeklyData[weeklyData.length - 1];
-      const currentMonth = monthlyData[monthlyData.length - 1];
-      const currentYear = yearlyData[yearlyData.length - 1];
+      const currentWeek = weeklyData[weeklyData.length - 1] || { week: '', totalStudyTime: 0, totalCycles: 0, days: [] };
+      const currentMonth = monthlyData[monthlyData.length - 1] || { month: '', totalStudyTime: 0, totalCycles: 0, averagePerDay: 0, weeks: [] };
+      const currentYear = yearlyData[yearlyData.length - 1] || { year: '', totalStudyTime: 0, totalCycles: 0, averagePerMonth: 0, months: [] };
       
       setStats({
         today: todayStats,
@@ -230,6 +241,18 @@ export const useStatistics = () => {
       });
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
+      // Establecer estadísticas vacías en caso de error
+      const emptyStats = {
+        today: { date: new Date().toDateString(), studyTime: 0, cycles: 0, breaks: 0 },
+        week: { week: '', totalStudyTime: 0, totalCycles: 0, days: [] },
+        month: { month: '', totalStudyTime: 0, totalCycles: 0, averagePerDay: 0, weeks: [] },
+        year: { year: '', totalStudyTime: 0, totalCycles: 0, averagePerMonth: 0, months: [] },
+        daily: [],
+        weekly: [],
+        monthly: [],
+        yearly: []
+      };
+      setStats(emptyStats);
     } finally {
       setIsLoading(false);
     }

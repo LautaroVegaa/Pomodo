@@ -32,23 +32,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener first
+    // Configurar listener de cambios de autenticación primero
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session);
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Refrescar la página en caso de login/logout para asegurar sincronización
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          // Pequeño delay para permitir que el estado se actualice
+          setTimeout(() => {
+            if (event === 'SIGNED_OUT') {
+              // Limpiar todo el localStorage al hacer logout
+              Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('pomodoro-') || key.startsWith('user-')) {
+                  localStorage.removeItem(key);
+                }
+              });
+            }
+          }, 100);
+        }
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    // Luego verificar sesión existente
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error checking session:', error);
+        } else {
+          console.log('Initial session check:', session?.user?.email || 'No session');
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Error in session check:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -57,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -67,11 +94,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Login exitoso para:', email);
+      
+      // La sesión se actualizará automáticamente por onAuthStateChange
     } catch (error) {
       console.error('Error en login:', error);
-      throw error;
-    } finally {
       setIsLoading(false);
+      throw error;
     }
   };
 
@@ -81,12 +109,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const redirectUrl = `${window.location.origin}/`;
       
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            name: name,
+            name: name.trim(),
           }
         }
       });
@@ -98,30 +126,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('Registro exitoso para:', email);
       
-      // If email confirmation is disabled, the user will be logged in automatically
+      // Si la confirmación de email está deshabilitada, el usuario se loguea automáticamente
       if (data.user && !data.user.email_confirmed_at) {
         console.log('Usuario registrado, esperando confirmación de email');
       }
     } catch (error) {
       console.error('Error en registro:', error);
-      throw error;
-    } finally {
       setIsLoading(false);
+      throw error;
     }
   };
 
   const logout = async () => {
     try {
-      // Clear local storage before signing out
-      localStorage.removeItem('pomodoro-stats');
-      localStorage.removeItem('pomodoro-state');
-      localStorage.removeItem('pomodoro-settings');
+      console.log('Iniciando logout...');
+      
+      // Limpiar datos específicos del usuario del localStorage
+      if (user?.id) {
+        const keysToRemove = [
+          `pomodoro-stats-${user.id}`,
+          `pomodoro-state-${user.id}`,
+          `pomodoro-settings-${user.id}`,
+          `pomodoro-historical-stats-${user.id}`
+        ];
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+      }
+      
+      // También limpiar claves generales por si acaso
+      ['pomodoro-stats', 'pomodoro-state', 'pomodoro-settings', 'pomodoro-historical-stats'].forEach(key => {
+        localStorage.removeItem(key);
+      });
       
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error en logout:', error);
         throw new Error(error.message);
       }
+      
       console.log('Usuario deslogueado exitosamente');
     } catch (error) {
       console.error('Error en logout:', error);
