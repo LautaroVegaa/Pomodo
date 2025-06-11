@@ -1,11 +1,11 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIOSStandalone } from "@/hooks/useIOSStandalone";
 
 interface RegisterFormProps {
   onToggleMode: () => void;
@@ -21,6 +21,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { register, isLoading } = useAuth();
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const { isIOSStandalone } = useIOSStandalone(emailInputRef);
 
   const validatePassword = (password: string) => {
     const errors = [];
@@ -116,6 +118,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
               <Input
+                ref={emailInputRef}
                 id="email"
                 name="email"
                 type="email"
@@ -129,6 +132,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                 autoCorrect="off"
                 spellCheck="false"
                 inputMode="email"
+                style={{
+                  WebkitUserSelect: 'text',
+                  WebkitTouchCallout: 'none',
+                  touchAction: 'manipulation'
+                }}
+                {...(!isIOSStandalone && { autoFocus: true })}
               />
             </div>
           </div>
