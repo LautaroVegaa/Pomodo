@@ -120,7 +120,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               <Input
                 id="email"
                 name="email"
-                type="email"
+                type="text"
                 placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

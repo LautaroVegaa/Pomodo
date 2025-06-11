@@ -69,7 +69,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
                 ref={emailInputRef}
                 id="email"
                 name="email"
-                type="email"
+                type="text"
                 placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
