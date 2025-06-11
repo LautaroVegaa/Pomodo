@@ -105,6 +105,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
+    
+    // Validación más estricta de contraseña
+    if (password.length < 8) {
+      setIsLoading(false);
+      throw new Error('La contraseña debe tener al menos 8 caracteres');
+    }
+    
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      setIsLoading(false);
+      throw new Error('La contraseña debe contener al menos una letra minúscula, una mayúscula y un número');
+    }
+
     try {
       const redirectUrl = `${window.location.origin}/`;
       
