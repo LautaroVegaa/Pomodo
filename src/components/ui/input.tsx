@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { useStandaloneMode } from "@/hooks/useStandaloneMode"
 import { cn } from "@/lib/utils"
@@ -34,6 +33,8 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
+        enterKeyHint="done"
+        inputMode={type === 'email' ? 'email' : type === 'password' ? 'text' : undefined}
         {...props}
       />
     )
