@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface DayData {
   date: string;
@@ -43,6 +43,7 @@ export interface StatisticsData {
 }
 
 export const useStatistics = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<StatisticsData>({
     today: { date: '', studyTime: 0, cycles: 0, breaks: 0 },
     week: { week: '', totalStudyTime: 0, totalCycles: 0, days: [] },
@@ -55,24 +56,40 @@ export const useStatistics = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Función para generar claves de localStorage específicas del usuario
+  const getUserStorageKey = (key: string) => {
+    if (!user?.id) return key;
+    return `${key}-${user.id}`;
+  };
+
   useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     loadStatistics();
     
     // Actualizar estadísticas cada minuto para reflejar cambios en tiempo real
     const interval = setInterval(loadStatistics, 60000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const loadStatistics = () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     
     try {
       const today = new Date();
       const currentDate = today.toDateString();
       
-      // Cargar datos reales del pomodoro de hoy
-      const savedStats = localStorage.getItem('pomodoro-stats');
+      // Cargar datos reales del pomodoro de hoy específicos del usuario
+      const savedStats = localStorage.getItem(getUserStorageKey('pomodoro-stats'));
       let todayStats = { date: currentDate, studyTime: 0, cycles: 0, breaks: 0 };
       
       if (savedStats) {
@@ -87,15 +104,15 @@ export const useStatistics = () => {
         }
       }
       
-      // Cargar datos históricos desde localStorage si existen
-      const savedHistoricalStats = localStorage.getItem('pomodoro-historical-stats');
+      // Cargar datos históricos específicos del usuario
+      const savedHistoricalStats = localStorage.getItem(getUserStorageKey('pomodoro-historical-stats'));
       let historicalStats = {};
       
       if (savedHistoricalStats) {
         historicalStats = JSON.parse(savedHistoricalStats);
       }
       
-      // Generar datos para los últimos 30 días (solo con datos reales)
+      // Generar datos para los últimos 30 días (solo con datos reales específicos del usuario)
       const dailyData: DayData[] = [];
       for (let i = 29; i >= 0; i--) {
         const date = new Date();

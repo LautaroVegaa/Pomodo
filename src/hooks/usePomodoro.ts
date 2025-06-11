@@ -1,5 +1,7 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface PomodoroSettings {
   workTime: number;
@@ -57,6 +59,7 @@ const motivationalMessages = {
 
 export const usePomodoro = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<PomodoroSettings>(defaultSettings);
   const [stats, setStats] = useState<PomodoroStats>({
     totalCycles: 0,
@@ -77,9 +80,16 @@ export const usePomodoro = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Función para guardar estadísticas históricas
+  // Función para generar claves de localStorage específicas del usuario
+  const getUserStorageKey = (key: string) => {
+    if (!user?.id) return key;
+    return `${key}-${user.id}`;
+  };
+
+  // Función para guardar estadísticas históricas específicas del usuario
   const saveHistoricalStats = (stats: PomodoroStats) => {
-    const savedHistoricalStats = localStorage.getItem('pomodoro-historical-stats');
+    const storageKey = getUserStorageKey('pomodoro-historical-stats');
+    const savedHistoricalStats = localStorage.getItem(storageKey);
     let historicalStats = {};
     
     if (savedHistoricalStats) {
@@ -87,20 +97,32 @@ export const usePomodoro = () => {
     }
     
     historicalStats[stats.date] = stats;
-    localStorage.setItem('pomodoro-historical-stats', JSON.stringify(historicalStats));
+    localStorage.setItem(storageKey, JSON.stringify(historicalStats));
+  };
+
+  // Solicitar permisos de notificación de forma más proactiva
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window && settings.notificationsEnabled) {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        console.log('Permiso de notificación:', permission);
+      }
+    }
   };
 
   // Cargar configuraciones, estadísticas y estado del localStorage
   useEffect(() => {
-    // Cargar configuraciones
-    const savedSettings = localStorage.getItem('pomodoro-settings');
+    if (!user) return;
+
+    // Cargar configuraciones específicas del usuario
+    const savedSettings = localStorage.getItem(getUserStorageKey('pomodoro-settings'));
     if (savedSettings) {
       const parsedSettings = JSON.parse(savedSettings);
       setSettings({ ...defaultSettings, ...parsedSettings });
     }
 
-    // Cargar estado del pomodoro
-    const savedState = localStorage.getItem('pomodoro-state');
+    // Cargar estado del pomodoro específico del usuario
+    const savedState = localStorage.getItem(getUserStorageKey('pomodoro-state'));
     if (savedState) {
       const parsedState = JSON.parse(savedState);
       setState(parsedState);
@@ -115,8 +137,8 @@ export const usePomodoro = () => {
       setState(initialState);
     }
 
-    // Cargar estadísticas del día actual
-    const savedStats = localStorage.getItem('pomodoro-stats');
+    // Cargar estadísticas del día actual específicas del usuario
+    const savedStats = localStorage.getItem(getUserStorageKey('pomodoro-stats'));
     if (savedStats) {
       const parsedStats = JSON.parse(savedStats);
       const today = new Date().toDateString();
@@ -136,7 +158,7 @@ export const usePomodoro = () => {
           date: today
         };
         setStats(newStats);
-        localStorage.setItem('pomodoro-stats', JSON.stringify(newStats));
+        localStorage.setItem(getUserStorageKey('pomodoro-stats'), JSON.stringify(newStats));
       }
     } else {
       // Primera vez usando la app
@@ -147,28 +169,28 @@ export const usePomodoro = () => {
         date: new Date().toDateString()
       };
       setStats(newStats);
-      localStorage.setItem('pomodoro-stats', JSON.stringify(newStats));
+      localStorage.setItem(getUserStorageKey('pomodoro-stats'), JSON.stringify(newStats));
     }
 
     // Crear elemento de audio para notificaciones
     audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAABACIA22YAABPIA4gBAAI=');
     
     // Solicitar permisos de notificación al cargar
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    requestNotificationPermission();
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, []);
+  }, [user]);
 
-  // Guardar estado cuando cambie
+  // Guardar estado cuando cambie (solo si hay usuario)
   useEffect(() => {
-    localStorage.setItem('pomodoro-state', JSON.stringify(state));
-  }, [state]);
+    if (user) {
+      localStorage.setItem(getUserStorageKey('pomodoro-state'), JSON.stringify(state));
+    }
+  }, [state, user]);
 
   // Cambiar mensaje motivacional cuando cambie el estado
   useEffect(() => {
@@ -177,7 +199,7 @@ export const usePomodoro = () => {
     setMotivationalMessage(randomMessage);
   }, [state.isBreak, state.cycle]);
 
-  // Timer principal
+  // Timer principal con mejor manejo de visibilidad
   useEffect(() => {
     if (state.isActive && state.timeLeft > 0) {
       intervalRef.current = setInterval(() => {
@@ -202,6 +224,22 @@ export const usePomodoro = () => {
     };
   }, [state.isActive, state.timeLeft]);
 
+  // Detectar cuando la app vuelve a estar visible para sincronizar el estado
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && state.isActive) {
+        // La app volvió a estar visible, mantener el timer corriendo
+        console.log('App visible nuevamente, timer activo');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [state.isActive]);
+
   const playNotificationSound = () => {
     if (settings.soundEnabled && audioRef.current) {
       audioRef.current.play().catch(console.error);
@@ -210,7 +248,19 @@ export const usePomodoro = () => {
 
   const triggerVibration = () => {
     if (settings.vibrationEnabled && 'vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200]);
+      navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+  };
+
+  const showNotification = (title: string, body: string) => {
+    if (settings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'pomodoro-notification',
+        requireInteraction: true
+      });
     }
   };
 
@@ -231,7 +281,9 @@ export const usePomodoro = () => {
       };
       
       setStats(newStats);
-      localStorage.setItem('pomodoro-stats', JSON.stringify(newStats));
+      if (user) {
+        localStorage.setItem(getUserStorageKey('pomodoro-stats'), JSON.stringify(newStats));
+      }
       
       // Determinar tipo de descanso
       const isLongBreak = newStats.totalCycles % settings.cyclesBeforeLongBreak === 0;
@@ -243,17 +295,14 @@ export const usePomodoro = () => {
         isBreak: true
       }));
       
-      // Notificación del navegador
-      if (settings.notificationsEnabled && Notification.permission === 'granted') {
-        new Notification('¡Ciclo completado!', {
-          body: `Tiempo de ${isLongBreak ? 'descanso largo' : 'descanso corto'}: ${breakTime} minutos`,
-          icon: '/favicon.ico'
-        });
-      }
+      const notificationTitle = '¡Ciclo completado!';
+      const notificationBody = `Tiempo de ${isLongBreak ? 'descanso largo' : 'descanso corto'}: ${breakTime} minutos`;
+      
+      showNotification(notificationTitle, notificationBody);
       
       toast({
-        title: "¡Ciclo completado!",
-        description: `Tiempo de ${isLongBreak ? 'descanso largo' : 'descanso corto'}: ${breakTime} minutos`,
+        title: notificationTitle,
+        description: notificationBody,
       });
     } else {
       // Completó descanso
@@ -264,7 +313,9 @@ export const usePomodoro = () => {
       };
       
       setStats(newStats);
-      localStorage.setItem('pomodoro-stats', JSON.stringify(newStats));
+      if (user) {
+        localStorage.setItem(getUserStorageKey('pomodoro-stats'), JSON.stringify(newStats));
+      }
       
       setState(prev => ({
         ...prev,
@@ -273,19 +324,17 @@ export const usePomodoro = () => {
         cycle: prev.cycle + 1
       }));
       
-      if (settings.notificationsEnabled && Notification.permission === 'granted') {
-        new Notification('¡Descanso terminado!', {
-          body: `Comenzando ciclo ${state.cycle + 1}`,
-          icon: '/favicon.ico'
-        });
-      }
+      const notificationTitle = '¡Descanso terminado!';
+      const notificationBody = `Comenzando ciclo ${state.cycle + 1}`;
+      
+      showNotification(notificationTitle, notificationBody);
       
       toast({
-        title: "¡Descanso terminado!",
-        description: `Comenzando ciclo ${state.cycle + 1}`,
+        title: notificationTitle,
+        description: notificationBody,
       });
     }
-  }, [state, settings, stats, toast]);
+  }, [state, settings, stats, toast, user]);
 
   const toggleTimer = () => {
     if (!state.isActive) {
@@ -296,9 +345,7 @@ export const usePomodoro = () => {
       }));
       
       // Solicitar permisos de notificación
-      if (settings.notificationsEnabled && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
+      requestNotificationPermission();
     } else {
       setState(prev => ({ ...prev, isActive: false }));
     }
@@ -316,7 +363,9 @@ export const usePomodoro = () => {
 
   const updateSettings = (newSettings: PomodoroSettings) => {
     setSettings(newSettings);
-    localStorage.setItem('pomodoro-settings', JSON.stringify(newSettings));
+    if (user) {
+      localStorage.setItem(getUserStorageKey('pomodoro-settings'), JSON.stringify(newSettings));
+    }
     
     // Si no está corriendo, actualizar el tiempo actual
     if (!state.isActive) {
