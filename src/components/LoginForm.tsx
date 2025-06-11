@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +15,7 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -57,53 +58,69 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
         </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="dark:text-white">Email</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-3">
+            <Label htmlFor="email" className="dark:text-white text-base">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="pl-12 text-base dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 disabled={isLoading}
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                inputMode="email"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="dark:text-white">Contraseña</Label>
+          <div className="space-y-3">
+            <Label htmlFor="password" className="dark:text-white text-base">Contraseña</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
               <Input
                 id="password"
-                type="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="pl-12 pr-12 text-base dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 disabled={isLoading}
+                autoComplete="current-password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10 p-1 touch-manipulation"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
+            <div className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-3 rounded">
               {error}
             </div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600"
+            className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-base touch-manipulation"
             disabled={isLoading}
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Iniciando sesión...
               </>
             ) : (
@@ -115,7 +132,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             <button
               type="button"
               onClick={onToggleMode}
-              className="text-blue-500 hover:text-blue-600 text-sm underline dark:text-blue-400"
+              className="text-blue-500 hover:text-blue-600 text-base underline dark:text-blue-400 touch-manipulation p-2"
               disabled={isLoading}
             >
               ¿No tienes cuenta? Regístrate

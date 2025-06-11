@@ -12,7 +12,13 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors"
+      style={{
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation'
+      }}
+    >
       <div className="max-w-md mx-auto space-y-6">
         {/* Header con toggle de tema */}
         <div className="text-center py-4">
