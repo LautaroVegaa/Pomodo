@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -317,9 +316,11 @@ export const usePomodoro = () => {
         icon: '/favicon.ico',
         badge: '/favicon.ico',
         tag: 'pomodoro-notification',
-        requireInteraction: true,
-        vibrate: [300, 100, 300, 100, 300]
+        requireInteraction: true
       });
+
+      // Trigger vibration separately since it's not part of NotificationOptions
+      triggerVibration();
 
       // Auto cerrar después de 10 segundos
       setTimeout(() => {
