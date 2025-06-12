@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Shield, Plus, X, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useFocusMode } from '../hooks/useFocusMode'
 
 interface FocusModeProps {
-  isActive: boolean;
+  userId: string
 }
 
 const DEFAULT_BLOCKED_SITES = [
@@ -24,10 +24,9 @@ const DEFAULT_BLOCKED_SITES = [
   'netflix.com'
 ];
 
-export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
-  const [focusModeEnabled, setFocusModeEnabled] = useState(false);
-  const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
-  const [newSite, setNewSite] = useState('');
+export function FocusMode({ userId }: FocusModeProps) {
+  const { focusMode, loading, updateFocusMode } = useFocusMode(userId)
+  const [newApp, setNewApp] = useState('')
   const [isExpanded, setIsExpanded] = useState(false);
   const [notificationsBlocked, setNotificationsBlocked] = useState(false);
   const { toast } = useToast();
@@ -37,8 +36,6 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
     const savedConfig = localStorage.getItem('focus-mode-config');
     if (savedConfig) {
       const config = JSON.parse(savedConfig);
-      setFocusModeEnabled(config.enabled || false);
-      setBlockedSites(config.blockedSites || DEFAULT_BLOCKED_SITES);
       setNotificationsBlocked(config.notificationsBlocked || false);
     }
   }, []);
@@ -46,188 +43,42 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
   // Guardar configuración en localStorage
   useEffect(() => {
     const config = {
-      enabled: focusModeEnabled,
-      blockedSites,
       notificationsBlocked
     };
     localStorage.setItem('focus-mode-config', JSON.stringify(config));
-  }, [focusModeEnabled, blockedSites, notificationsBlocked]);
+  }, [notificationsBlocked]);
 
-  // Activar/desactivar modo enfoque automáticamente según el estado del Pomodoro
-  useEffect(() => {
-    if (isActive && focusModeEnabled) {
-      activateFocusMode();
-    } else {
-      deactivateFocusMode();
-    }
-  }, [isActive, focusModeEnabled]);
+  const handleToggleNotifications = async (checked: boolean) => {
+    await updateFocusMode({ block_notifications: checked })
+  }
 
-  const activateFocusMode = async () => {
-    try {
-      // Bloquear notificaciones si está habilitado
-      if (notificationsBlocked && 'Notification' in window) {
-        // Crear una notificación invisible para bloquear las demás
-        if (Notification.permission === 'granted') {
-          // En navegadores modernos, podemos usar la Page Visibility API
-          // para detectar cuando el usuario intenta cambiar de pestaña
-          document.addEventListener('visibilitychange', handleVisibilityChange);
-        }
-      }
+  const handleAddApp = async () => {
+    if (!newApp.trim()) return
 
-      // Inyectar script para bloquear sitios web
-      injectSiteBlocker();
-      
-      toast({
-        title: "🔒 Modo Enfoque Activado",
-        description: `Bloqueando ${blockedSites.length} sitios web y ${notificationsBlocked ? 'notificaciones' : 'sin bloqueo de notificaciones'}.`,
-      });
-    } catch (error) {
-      console.error('Error activating focus mode:', error);
-    }
-  };
+    const updatedApps = [...(focusMode?.blocked_apps || []), newApp.trim()]
+    await updateFocusMode({ blocked_apps: updatedApps })
+    setNewApp('')
+  }
 
-  const deactivateFocusMode = () => {
-    try {
-      // Remover bloqueadores
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      removeSiteBlocker();
-      
-      if (isActive) {
-        toast({
-          title: "🔓 Modo Enfoque Desactivado",
-          description: "Puedes acceder nuevamente a todos los sitios web.",
-        });
-      }
-    } catch (error) {
-      console.error('Error deactivating focus mode:', error);
-    }
-  };
+  const handleRemoveApp = async (appToRemove: string) => {
+    const updatedApps = (focusMode?.blocked_apps || []).filter(app => app !== appToRemove)
+    await updateFocusMode({ blocked_apps: updatedApps })
+  }
 
-  const handleVisibilityChange = () => {
-    if (document.hidden && isActive && focusModeEnabled) {
-      // El usuario intentó cambiar de pestaña durante una sesión de enfoque
-      setTimeout(() => {
-        if (document.hidden) {
-          window.focus();
-          toast({
-            title: "⚠️ Mantén el enfoque",
-            description: "Estás en modo enfoque. ¡Concéntrate en tu Pomodoro!",
-          });
-        }
-      }, 1000);
-    }
-  };
-
-  const injectSiteBlocker = () => {
-    // Crear un script que bloquee los sitios especificados
-    const script = document.createElement('script');
-    script.id = 'focus-mode-blocker';
-    script.textContent = `
-      (function() {
-        const blockedSites = ${JSON.stringify(blockedSites)};
-        const currentHost = window.location.hostname;
-        
-        const isBlocked = blockedSites.some(site => 
-          currentHost.includes(site) || currentHost.endsWith(site)
-        );
-        
-        if (isBlocked) {
-          document.body.innerHTML = \`
-            <div style="
-              position: fixed;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              align-items: center;
-              z-index: 999999;
-              font-family: 'Arial', sans-serif;
-              color: white;
-              text-align: center;
-            ">
-              <div style="max-width: 500px; padding: 40px;">
-                <h1 style="font-size: 3em; margin-bottom: 20px;">🔒</h1>
-                <h2 style="font-size: 2em; margin-bottom: 20px;">Sitio Bloqueado</h2>
-                <p style="font-size: 1.2em; margin-bottom: 30px;">
-                  Este sitio está bloqueado durante tu sesión de Pomodoro.
-                </p>
-                <p style="font-size: 1em; opacity: 0.8;">
-                  ¡Mantén el enfoque y vuelve cuando termines tu ciclo de trabajo!
-                </p>
-                <div style="margin-top: 30px;">
-                  <button onclick="window.close()" style="
-                    background: rgba(255,255,255,0.2);
-                    border: 2px solid white;
-                    color: white;
-                    padding: 12px 24px;
-                    border-radius: 25px;
-                    cursor: pointer;
-                    font-size: 1em;
-                  ">Cerrar Pestaña</button>
-                </div>
-              </div>
-            </div>
-          \`;
-          
-          // Bloquear navegación
-          window.addEventListener('beforeunload', function(e) {
-            e.preventDefault();
-            e.returnValue = '';
-          });
-        }
-      })();
-    `;
-    
-    // Intentar inyectar en todas las pestañas si es posible
-    document.head.appendChild(script);
-  };
-
-  const removeSiteBlocker = () => {
-    const script = document.getElementById('focus-mode-blocker');
-    if (script) {
-      script.remove();
-    }
-  };
-
-  const addSite = () => {
-    if (newSite.trim() && !blockedSites.includes(newSite.trim())) {
-      setBlockedSites([...blockedSites, newSite.trim()]);
-      setNewSite('');
-      toast({
-        title: "Sitio agregado",
-        description: `${newSite.trim()} será bloqueado durante el modo enfoque.`,
-      });
-    }
-  };
-
-  const removeSite = (site: string) => {
-    setBlockedSites(blockedSites.filter(s => s !== site));
-    toast({
-      title: "Sitio removido",
-      description: `${site} ya no será bloqueado.`,
-    });
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      addSite();
-    }
-  };
+  if (loading) {
+    return <div>Loading...</div>
+  }
 
   return (
     <Card className={`dark:bg-gray-800 dark:border-gray-700 transition-all duration-300 ${
-      isActive && focusModeEnabled ? 'ring-2 ring-red-500 shadow-lg shadow-red-500/20' : ''
+      focusMode?.enabled ? 'ring-2 ring-red-500 shadow-lg shadow-red-500/20' : ''
     }`}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-lg dark:text-white">
           <div className="flex items-center">
             <Shield className="w-5 h-5 mr-2" />
             Modo Enfoque
-            {isActive && focusModeEnabled && (
+            {focusMode?.enabled && (
               <Badge className="ml-2 bg-red-500 text-white animate-pulse">ACTIVO</Badge>
             )}
           </div>
@@ -249,8 +100,10 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
           </Label>
           <Switch
             id="focus-mode"
-            checked={focusModeEnabled}
-            onCheckedChange={setFocusModeEnabled}
+            checked={focusMode?.enabled || false}
+            onCheckedChange={(checked) => {
+              updateFocusMode({ enabled: checked })
+            }}
           />
         </div>
 
@@ -264,42 +117,46 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
               <Switch
                 id="block-notifications"
                 checked={notificationsBlocked}
-                onCheckedChange={setNotificationsBlocked}
+                onCheckedChange={handleToggleNotifications}
               />
             </div>
 
             {/* Lista de sitios bloqueados */}
             <div className="space-y-2">
               <Label className="dark:text-white text-sm font-medium">
-                Sitios web bloqueados ({blockedSites.length})
+                Sitios web bloqueados ({focusMode?.blocked_apps.length || 0})
               </Label>
               
               {/* Input para agregar sitios */}
               <div className="flex space-x-2">
                 <Input
                   placeholder="ejemplo.com"
-                  value={newSite}
-                  onChange={(e) => setNewSite(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  value={newApp}
+                  onChange={(e) => setNewApp(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddApp();
+                    }
+                  }}
                   className="text-sm dark:bg-gray-700 dark:text-white"
                 />
-                <Button size="sm" onClick={addSite} disabled={!newSite.trim()}>
+                <Button size="sm" onClick={handleAddApp} disabled={!newApp.trim()}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
 
               {/* Lista de sitios */}
               <div className="max-h-32 overflow-y-auto space-y-1">
-                {blockedSites.map((site, index) => (
+                {focusMode?.blocked_apps.map((app, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm"
                   >
-                    <span className="dark:text-white">{site}</span>
+                    <span className="dark:text-white">{app}</span>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => removeSite(site)}
+                      onClick={() => handleRemoveApp(app)}
                       className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900"
                     >
                       <X className="w-3 h-3" />
@@ -309,7 +166,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
               </div>
             </div>
 
-            {focusModeEnabled && (
+            {focusMode?.enabled && (
               <div className="text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
                 <strong>💡 Consejo:</strong> El modo enfoque se activará automáticamente durante tus sesiones de trabajo Pomodoro. Los sitios bloqueados mostrarán una pantalla de bloqueo.
               </div>
@@ -319,6 +176,6 @@ export const FocusMode: React.FC<FocusModeProps> = ({ isActive }) => {
       </CardContent>
     </Card>
   );
-};
+}
 
 export default FocusMode;
