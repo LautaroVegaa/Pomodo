@@ -1,17 +1,16 @@
 import { useEffect } from 'react'
-import { usePersistentTimer } from '../hooks/usePersistentTimer'
+import { usePomodoroTimer } from '../contexts/PomodoroTimerContext'
 import { useNotifications } from '../hooks/useNotifications'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { useToast } from '@/hooks/use-toast'
 
 interface PersistentTimerProps {
-  userId: string
   focusDuration: number
   breakDuration: number
 }
 
-export function PersistentTimer({ userId, focusDuration, breakDuration }: PersistentTimerProps) {
+export function PersistentTimer({ focusDuration, breakDuration }: PersistentTimerProps) {
   const {
     timeLeft,
     isRunning,
@@ -20,7 +19,7 @@ export function PersistentTimer({ userId, focusDuration, breakDuration }: Persis
     stopTimer,
     pauseTimer,
     resumeTimer
-  } = usePersistentTimer(userId)
+  } = usePomodoroTimer()
 
   const { sendNotification, requestPermission } = useNotifications()
   const { toast } = useToast()
