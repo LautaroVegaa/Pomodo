@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { PomodoroSession } from '../lib/supabase'
 
 const STORAGE_KEY = 'pomodoro_session'
+const RUNNING_KEY = 'pomodoro_is_running'
 
 export const usePersistentTimer = (userId: string) => {
   const [session, setSession] = useState<PomodoroSession | null>(null)
@@ -17,24 +18,27 @@ export const usePersistentTimer = (userId: string) => {
     return Math.max(0, session.duration - elapsed)
   })()
 
-  // Load session from storage on mount
+  // Load session and running state from storage on mount
   useEffect(() => {
     const storedSession = localStorage.getItem(STORAGE_KEY)
+    const storedRunning = localStorage.getItem(RUNNING_KEY)
     if (storedSession) {
       const parsedSession = JSON.parse(storedSession)
       setSession(parsedSession)
-      setIsRunning(true)
+      setIsRunning(storedRunning === 'true')
     }
   }, [])
 
-  // Save session to storage
+  // Save session and running state to storage
   useEffect(() => {
     if (session) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+      localStorage.setItem(RUNNING_KEY, isRunning ? 'true' : 'false')
     } else {
       localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(RUNNING_KEY)
     }
-  }, [session])
+  }, [session, isRunning])
 
   // Timer logic: actualizar 'now' cada segundo solo si está corriendo
   useEffect(() => {
