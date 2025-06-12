@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
                 ref={emailInputRef}
                 id="email"
                 name="email"
-                type="text"
+                type="email"
                 placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -80,18 +81,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
                 autoCorrect="off"
                 spellCheck="false"
                 inputMode="email"
-                style={{ 
-                  fontSize: '16px',
-                  WebkitUserSelect: 'text',
-                  WebkitTouchCallout: 'none',
-                  touchAction: 'manipulation'
-                }}
-                onTouchStart={(e) => {
-                  setTimeout(() => {
-                    e.currentTarget.focus();
-                  }, 100);
-                }}
-                onFocus={() => window.scrollTo(0, 0)}
               />
             </div>
           </div>
