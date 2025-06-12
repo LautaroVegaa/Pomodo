@@ -6,8 +6,16 @@ const STORAGE_KEY = 'pomodoro_session'
 
 export const usePersistentTimer = (userId: string) => {
   const [session, setSession] = useState<PomodoroSession | null>(null)
-  const [timeLeft, setTimeLeft] = useState<number>(0)
   const [isRunning, setIsRunning] = useState(false)
+  const [now, setNow] = useState(Date.now())
+
+  // Calcular el tiempo restante dinámicamente
+  const timeLeft = (() => {
+    if (!session) return 0
+    const startTime = new Date(session.start_time).getTime()
+    const elapsed = Math.floor((now - startTime) / 1000)
+    return Math.max(0, session.duration - elapsed)
+  })()
 
   // Load session from storage on mount
   useEffect(() => {
@@ -15,15 +23,7 @@ export const usePersistentTimer = (userId: string) => {
     if (storedSession) {
       const parsedSession = JSON.parse(storedSession)
       setSession(parsedSession)
-      
-      // Calculate time left
-      const startTime = new Date(parsedSession.start_time).getTime()
-      const now = Date.now()
-      const elapsed = Math.floor((now - startTime) / 1000)
-      const remaining = Math.max(0, parsedSession.duration - elapsed)
-      
-      setTimeLeft(remaining)
-      setIsRunning(remaining > 0)
+      setIsRunning(true)
     }
   }, [])
 
@@ -36,26 +36,28 @@ export const usePersistentTimer = (userId: string) => {
     }
   }, [session])
 
-  // Timer logic
+  // Timer logic: actualizar 'now' cada segundo solo si está corriendo
   useEffect(() => {
-    let interval: number | undefined
+    if (!isRunning || !session) return
+    const interval = setInterval(() => {
+      setNow(Date.now())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isRunning, session])
 
-    if (isRunning && timeLeft > 0) {
-      interval = window.setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRunning(false)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
+  // Escuchar cuando el usuario vuelve a la app (tab visible)
+  useEffect(() => {
+    const handleVisibility = () => {
+      setNow(Date.now())
     }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
 
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
+  // Parar el timer si se termina
+  useEffect(() => {
+    if (isRunning && timeLeft === 0) {
+      setIsRunning(false)
     }
   }, [isRunning, timeLeft])
 
@@ -69,17 +71,14 @@ export const usePersistentTimer = (userId: string) => {
       type,
       completed: false
     }
-
     setSession(newSession)
-    setTimeLeft(duration)
     setIsRunning(true)
-
+    setNow(Date.now())
     // Save to Supabase
     try {
       const { error } = await supabase
         .from('pomodoro_sessions')
         .insert([newSession])
-
       if (error) throw error
     } catch (error) {
       console.error('Error saving session:', error)
@@ -88,23 +87,19 @@ export const usePersistentTimer = (userId: string) => {
 
   const stopTimer = useCallback(async () => {
     if (!session) return
-
     setIsRunning(false)
     const updatedSession = {
       ...session,
       end_time: new Date().toISOString(),
       completed: true
     }
-
     setSession(updatedSession)
-
     // Update in Supabase
     try {
       const { error } = await supabase
         .from('pomodoro_sessions')
         .update(updatedSession)
         .eq('id', session.id)
-
       if (error) throw error
     } catch (error) {
       console.error('Error updating session:', error)
@@ -118,6 +113,7 @@ export const usePersistentTimer = (userId: string) => {
   const resumeTimer = useCallback(() => {
     if (timeLeft > 0) {
       setIsRunning(true)
+      setNow(Date.now())
     }
   }, [timeLeft])
 
