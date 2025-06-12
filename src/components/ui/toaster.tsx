@@ -11,18 +11,7 @@ import {
 } from "@/components/ui/toast"
 
 export function Toaster() {
-  // Asegurar que el hook solo se ejecute cuando React esté disponible
-  const [isClient, setIsClient] = React.useState(false)
   const { toasts } = useToast()
-
-  React.useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // No renderizar nada hasta que React esté completamente inicializado
-  if (!isClient) {
-    return null
-  }
 
   return (
     <ToastProvider>
