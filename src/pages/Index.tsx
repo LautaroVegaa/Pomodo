@@ -7,6 +7,7 @@ import { usePomodoro } from "@/hooks/usePomodoro";
 import { useAuth } from "@/contexts/AuthContext";
 import { Settings } from "@/components/Settings";
 import { TimeSlider } from "@/components/TimeSlider";
+import { FocusMode } from "@/components/FocusMode";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -59,17 +60,26 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
       <div className="max-w-md mx-auto space-y-6">
-        {/* Header con información del usuario */}
+        {/* Header con información del usuario - diseño mejorado para centrado perfecto */}
         <div className="text-center py-4">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center space-x-2">
+          <div className="relative flex items-center justify-center mb-2">
+            {/* Usuario a la izquierda - posición absoluta para no afectar el centrado */}
+            <div className="absolute left-0 flex items-center space-x-2">
               <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 px-3 py-1 rounded-full shadow-sm">
                 <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                <span className="text-sm text-gray-700 dark:text-gray-200">{userName}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-200 max-w-[120px] truncate">
+                  {userName}
+                </span>
               </div>
             </div>
+            
+            {/* Título centrado perfectamente */}
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Pomodō</h1>
-            <Settings />
+            
+            {/* Settings a la derecha - posición absoluta para no afectar el centrado */}
+            <div className="absolute right-0">
+              <Settings />
+            </div>
           </div>
           <p className="text-gray-600 dark:text-gray-300">Técnica Pomodoro para estudiantes</p>
         </div>
@@ -122,6 +132,9 @@ const Index = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modo Enfoque */}
+        <FocusMode isActive={isActive && !isBreak} />
 
         {/* Estadísticas rápidas */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">

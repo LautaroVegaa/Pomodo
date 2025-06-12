@@ -51,9 +51,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Manejo específico de eventos
         if (event === 'SIGNED_IN') {
           console.log('Usuario autenticado exitosamente');
+          // Guardar indicador de sesión persistente
+          localStorage.setItem('pomodoro-auth-persisted', 'true');
         } else if (event === 'SIGNED_OUT') {
           console.log('Usuario deslogueado');
-          // Limpiar todo el localStorage específico del usuario
+          // Limpiar indicador de sesión persistente
+          localStorage.removeItem('pomodoro-auth-persisted');
+          // Limpiar todo el localStorage específico del usuario después de un delay
           setTimeout(() => {
             Object.keys(localStorage).forEach(key => {
               if (key.startsWith('pomodoro-') || key.startsWith('user-')) {
@@ -63,13 +67,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }, 100);
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refrescado automáticamente');
+          // Mantener indicador de sesión persistente
+          localStorage.setItem('pomodoro-auth-persisted', 'true');
         }
       }
     );
 
-    // Verificar sesión existente con mejor manejo de errores
+    // Verificar sesión existente con mejor manejo de errores y persistencia
     const initializeAuth = async () => {
       try {
+        console.log('Inicializando autenticación...');
+        
+        // Verificar si tenemos una sesión persistente guardada
+        const hasPersistedAuth = localStorage.getItem('pomodoro-auth-persisted');
+        console.log('Sesión persistente guardada:', hasPersistedAuth);
+
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -79,6 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setSession(null);
             setUser(null);
             setIsLoading(false);
+            localStorage.removeItem('pomodoro-auth-persisted');
           }
           return;
         }
@@ -88,6 +101,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(session);
           setUser(session?.user ?? null);
           setIsLoading(false);
+          
+          // Si tenemos sesión, marcar como persistente
+          if (session) {
+            localStorage.setItem('pomodoro-auth-persisted', 'true');
+          } else if (hasPersistedAuth) {
+            // Si tenía sesión persistente pero no la encontramos, intentar refresh
+            console.log('Intentando recuperar sesión persistente...');
+            try {
+              const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+              if (!refreshError && refreshedSession) {
+                console.log('Sesión recuperada exitosamente');
+                setSession(refreshedSession);
+                setUser(refreshedSession.user);
+                localStorage.setItem('pomodoro-auth-persisted', 'true');
+              } else {
+                localStorage.removeItem('pomodoro-auth-persisted');
+              }
+            } catch (refreshError) {
+              console.error('Error recovering session:', refreshError);
+              localStorage.removeItem('pomodoro-auth-persisted');
+            }
+          }
         }
       } catch (error) {
         console.error('Error in session initialization:', error);
@@ -95,6 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(null);
           setUser(null);
           setIsLoading(false);
+          localStorage.removeItem('pomodoro-auth-persisted');
         }
       }
     };
@@ -110,6 +146,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log('Iniciando login para:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
@@ -121,6 +159,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Login exitoso para:', email);
+      
+      // Marcar sesión como persistente
+      if (data.session) {
+        localStorage.setItem('pomodoro-auth-persisted', 'true');
+      }
       
       // La sesión se actualizará automáticamente por onAuthStateChange
     } catch (error) {
@@ -145,6 +188,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
+      console.log('Iniciando registro para:', email);
+      
       const redirectUrl = `${window.location.origin}/`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -168,6 +213,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Si la confirmación de email está deshabilitada, el usuario se loguea automáticamente
       if (data.user && !data.user.email_confirmed_at) {
         console.log('Usuario registrado, esperando confirmación de email');
+      } else if (data.session) {
+        // Si hay sesión inmediata, marcar como persistente
+        localStorage.setItem('pomodoro-auth-persisted', 'true');
       }
     } catch (error) {
       console.error('Error en registro:', error);
@@ -195,7 +243,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       // También limpiar claves generales por si acaso
-      ['pomodoro-stats', 'pomodoro-state', 'pomodoro-settings', 'pomodoro-historical-stats'].forEach(key => {
+      ['pomodoro-stats', 'pomodoro-state', 'pomodoro-settings', 'pomodoro-historical-stats', 'pomodoro-auth-persisted'].forEach(key => {
         localStorage.removeItem(key);
       });
       
