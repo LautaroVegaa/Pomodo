@@ -10,16 +10,10 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Statistics from "./pages/Statistics";
 import NotFound from "./pages/NotFound";
-import * as React from "react";
-
-console.log('App.tsx - React available:', !!React);
-console.log('App.tsx - React.useState available:', !!React.useState);
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  console.log('App component rendering');
-  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
