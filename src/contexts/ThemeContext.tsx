@@ -23,9 +23,9 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = React.useState<Theme>('light');
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Cargar tema del localStorage
     const savedTheme = localStorage.getItem('studyboost-theme') as Theme;
     if (savedTheme) {
@@ -37,7 +37,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Aplicar tema al DOM
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');

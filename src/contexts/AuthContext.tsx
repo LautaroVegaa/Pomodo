@@ -32,52 +32,79 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Configurar listener de cambios de autenticación primero
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        if (!mounted) return;
+        
+        // Actualizar estado de sesión
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Solo marcar como no loading después de cualquier evento de auth
         setIsLoading(false);
         
-        // Refrescar la página en caso de login/logout para asegurar sincronización
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          // Pequeño delay para permitir que el estado se actualice
+        // Manejo específico de eventos
+        if (event === 'SIGNED_IN') {
+          console.log('Usuario autenticado exitosamente');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('Usuario deslogueado');
+          // Limpiar todo el localStorage específico del usuario
           setTimeout(() => {
-            if (event === 'SIGNED_OUT') {
-              // Limpiar todo el localStorage al hacer logout
-              Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('pomodoro-') || key.startsWith('user-')) {
-                  localStorage.removeItem(key);
-                }
-              });
-            }
+            Object.keys(localStorage).forEach(key => {
+              if (key.startsWith('pomodoro-') || key.startsWith('user-')) {
+                localStorage.removeItem(key);
+              }
+            });
           }, 100);
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refrescado automáticamente');
         }
       }
     );
 
-    // Luego verificar sesión existente
-    const checkSession = async () => {
+    // Verificar sesión existente con mejor manejo de errores
+    const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (error) {
           console.error('Error checking session:', error);
-        } else {
+          // En caso de error, limpiar estado y continuar
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        if (mounted) {
           console.log('Initial session check:', session?.user?.email || 'No session');
           setSession(session);
           setUser(session?.user ?? null);
+          setIsLoading(false);
         }
       } catch (error) {
-        console.error('Error in session check:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error in session initialization:', error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+        }
       }
     };
 
-    checkSession();
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
