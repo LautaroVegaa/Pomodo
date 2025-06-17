@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Pause, RotateCcw, BarChart3, User, Clock, Coffee } from "lucide-react";
-import { usePomodoro } from "@/hooks/usePomodoro";
+import { usePomodoroTimer } from "@/contexts/PomodoroTimerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Settings } from "@/components/Settings";
 import { TimeSlider } from "@/components/TimeSlider";
 import { FocusMode } from "@/components/FocusMode";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const Index = () => {
   const { user, logout } = useAuth();
@@ -17,24 +17,75 @@ const Index = () => {
   
   const {
     timeLeft,
-    isActive,
-    isBreak,
-    cycle,
-    settings,
-    stats,
-    progress,
-    motivationalMessage,
-    formatTime,
-    toggleTimer,
-    resetTimer,
-    updateSettings
-  } = usePomodoro();
+    isRunning,
+    session,
+    startTimer,
+    stopTimer,
+    pauseTimer,
+    resumeTimer
+  } = usePomodoroTimer();
+
+  // Estados locales para configuración
+  const [workTime, setWorkTime] = useState(25);
+  const [breakTime, setBreakTime] = useState(5);
+  const [cycle, setCycle] = useState(1);
+  const [stats, setStats] = useState({
+    totalCycles: 0,
+    totalStudyTime: 0,
+    totalBreakTime: 0
+  });
 
   useEffect(() => {
     if (!user) {
       navigate('/auth');
     }
   }, [user, navigate]);
+
+  // Cargar configuración y estadísticas del localStorage
+  useEffect(() => {
+    if (!user) return;
+
+    const savedWorkTime = localStorage.getItem(`pomodoro-work-time-${user.id}`);
+    const savedBreakTime = localStorage.getItem(`pomodoro-break-time-${user.id}`);
+    const savedStats = localStorage.getItem(`pomodoro-stats-${user.id}`);
+    const savedCycle = localStorage.getItem(`pomodoro-cycle-${user.id}`);
+
+    if (savedWorkTime) setWorkTime(parseInt(savedWorkTime));
+    if (savedBreakTime) setBreakTime(parseInt(savedBreakTime));
+    if (savedCycle) setCycle(parseInt(savedCycle));
+    if (savedStats) {
+      const parsedStats = JSON.parse(savedStats);
+      const today = new Date().toDateString();
+      if (parsedStats.date === today) {
+        setStats(parsedStats);
+      }
+    }
+  }, [user]);
+
+  // Actualizar estadísticas cuando termina una sesión
+  useEffect(() => {
+    if (!session || !user) return;
+
+    if (timeLeft === 0 && isRunning === false) {
+      const newStats = { ...stats };
+      
+      if (session.type === 'focus') {
+        newStats.totalCycles += 1;
+        newStats.totalStudyTime += session.duration / 60;
+        setCycle(prev => {
+          const newCycle = prev + 1;
+          localStorage.setItem(`pomodoro-cycle-${user.id}`, newCycle.toString());
+          return newCycle;
+        });
+      } else {
+        newStats.totalBreakTime += session.duration / 60;
+      }
+      
+      const statsWithDate = { ...newStats, date: new Date().toDateString() };
+      setStats(newStats);
+      localStorage.setItem(`pomodoro-stats-${user.id}`, JSON.stringify(statsWithDate));
+    }
+  }, [timeLeft, isRunning, session, stats, user]);
 
   if (!user) {
     return null;
@@ -44,18 +95,64 @@ const Index = () => {
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
 
   const handleWorkTimeChange = (newTime: number) => {
-    updateSettings({
-      ...settings,
-      workTime: newTime
-    });
+    setWorkTime(newTime);
+    if (user) {
+      localStorage.setItem(`pomodoro-work-time-${user.id}`, newTime.toString());
+    }
   };
 
   const handleBreakTimeChange = (newTime: number) => {
-    updateSettings({
-      ...settings,
-      shortBreak: newTime
-    });
+    setBreakTime(newTime);
+    if (user) {
+      localStorage.setItem(`pomodoro-break-time-${user.id}`, newTime.toString());
+    }
   };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleStartFocus = () => {
+    startTimer(workTime * 60, 'focus');
+  };
+
+  const handleStartBreak = () => {
+    startTimer(breakTime * 60, 'break');
+  };
+
+  const handleToggleTimer = () => {
+    if (isRunning) {
+      pauseTimer();
+    } else if (session) {
+      resumeTimer();
+    } else {
+      handleStartFocus();
+    }
+  };
+
+  const handleResetTimer = () => {
+    stopTimer();
+  };
+
+  // Calcular progreso
+  const getCurrentDuration = () => {
+    if (!session) return workTime * 60;
+    return session.duration;
+  };
+
+  const progress = session 
+    ? ((getCurrentDuration() - timeLeft) / getCurrentDuration()) * 100
+    : 0;
+
+  const isBreak = session?.type === 'break';
+  const isActive = isRunning;
+
+  // Mensaje motivacional simple
+  const motivationalMessage = isBreak 
+    ? "¡Excelente trabajo! Disfruta tu descanso."
+    : "¡Concentración total! Este es tu momento.";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors">
@@ -111,24 +208,46 @@ const Index = () => {
 
             {/* Controles */}
             <div className="flex justify-center space-x-4">
-              <Button
-                onClick={toggleTimer}
-                size="lg"
-                className={`w-20 h-20 rounded-full ${
-                  isBreak ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
-                }`}
-              >
-                {isActive ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
-              </Button>
-              
-              <Button
-                onClick={resetTimer}
-                variant="outline"
-                size="lg"
-                className="w-20 h-20 rounded-full dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                <RotateCcw className="w-8 h-8" />
-              </Button>
+              {!session ? (
+                <>
+                  <Button
+                    onClick={handleStartFocus}
+                    size="lg"
+                    className="w-20 h-20 rounded-full bg-blue-500 hover:bg-blue-600"
+                  >
+                    <Play className="w-8 h-8" />
+                  </Button>
+                  <Button
+                    onClick={handleStartBreak}
+                    variant="outline"
+                    size="lg"
+                    className="w-20 h-20 rounded-full dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <Coffee className="w-8 h-8" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleToggleTimer}
+                    size="lg"
+                    className={`w-20 h-20 rounded-full ${
+                      isBreak ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
+                  >
+                    {isActive ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
+                  </Button>
+                  
+                  <Button
+                    onClick={handleResetTimer}
+                    variant="outline"
+                    size="lg"
+                    className="w-20 h-20 rounded-full dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <RotateCcw className="w-8 h-8" />
+                  </Button>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -162,7 +281,7 @@ const Index = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {Math.floor(stats.totalStudyTime / 60)}h {stats.totalStudyTime % 60}m
+                  {Math.floor(stats.totalStudyTime / 60)}h {Math.round(stats.totalStudyTime % 60)}m
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Tiempo estudiado</p>
               </div>
@@ -181,7 +300,7 @@ const Index = () => {
             <div className="space-y-4">
               <TimeSlider
                 label="Tiempo de trabajo"
-                value={settings.workTime}
+                value={workTime}
                 maxValue={60}
                 minValue={1}
                 bgColor="bg-blue-50 dark:bg-blue-900/20"
@@ -190,7 +309,7 @@ const Index = () => {
               />
               <TimeSlider
                 label="Tiempo de descanso"
-                value={settings.shortBreak}
+                value={breakTime}
                 maxValue={30}
                 minValue={1}
                 bgColor="bg-green-50 dark:bg-green-900/20"
