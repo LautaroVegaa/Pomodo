@@ -37,9 +37,9 @@ const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <PomodoroProviderWrapper>
-              <TooltipProvider>
-                <BrowserRouter>
+            <TooltipProvider>
+              <BrowserRouter>
+                <PomodoroProviderWrapper>
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/auth" element={<Auth />} />
@@ -47,9 +47,9 @@ const App: React.FC = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   <Sonner />
-                </BrowserRouter>
-              </TooltipProvider>
-            </PomodoroProviderWrapper>
+                </PomodoroProviderWrapper>
+              </BrowserRouter>
+            </TooltipProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>

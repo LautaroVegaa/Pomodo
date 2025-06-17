@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,18 @@ const Index = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
+  // Verificar autenticación antes de usar el hook
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  // Si no hay usuario, no renderizar nada
+  if (!user) {
+    return null;
+  }
+
   const {
     timeLeft,
     isRunning,
@@ -35,16 +46,8 @@ const Index = () => {
     totalBreakTime: 0
   });
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-    }
-  }, [user, navigate]);
-
   // Cargar configuración y estadísticas del localStorage
   useEffect(() => {
-    if (!user) return;
-
     const savedWorkTime = localStorage.getItem(`pomodoro-work-time-${user.id}`);
     const savedBreakTime = localStorage.getItem(`pomodoro-break-time-${user.id}`);
     const savedStats = localStorage.getItem(`pomodoro-stats-${user.id}`);
@@ -86,10 +89,6 @@ const Index = () => {
       localStorage.setItem(`pomodoro-stats-${user.id}`, JSON.stringify(statsWithDate));
     }
   }, [timeLeft, isRunning, session, stats, user]);
-
-  if (!user) {
-    return null;
-  }
 
   // Get user name from user metadata or email
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
@@ -253,7 +252,7 @@ const Index = () => {
         </Card>
 
         {/* Modo Enfoque */}
-        <FocusMode isActive={isActive && !isBreak} />
+        <FocusMode userId={user.id} />
 
         {/* Estadísticas rápidas */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
